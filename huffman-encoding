@@ -1,0 +1,121 @@
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Scanner;
+import java.util.stream.Collectors;
+
+class HuffmanTreeNode {
+    Long sum;
+    Character letter;
+    HuffmanTreeNode left;
+    HuffmanTreeNode right;
+    public HuffmanTreeNode (Long sum, Character letter) { this.sum = sum; this.letter = letter; }
+    public HuffmanTreeNode(Long sum, HuffmanTreeNode left, HuffmanTreeNode right) {
+        this.sum = sum;
+        this.left = left;
+        this.right = right;
+    }
+
+    @Override
+    public String toString() {
+        return "sum=" + sum + ", letter=" + letter;
+    }
+}
+
+/**
+ *
+ * @author Hasan
+ */
+public class Main {
+
+    protected Map<Character, Long> charOccurrances;
+    protected List<Character> orderedLetters = new ArrayList<>();
+    protected List<HuffmanTreeNode> queue = new LinkedList<>();
+    protected Map<Character, String> letterCodeMap;
+    protected String input;
+    protected StringBuilder encoded;
+
+    public static void main(String[] args) {
+        new Main().run();
+    }
+
+    private void run() {
+        Scanner s = new Scanner(System.in);
+        input = s.nextLine();
+        buildCharOccuranceMap();
+        buildOrderedLettersList();
+        if (orderedLetters.size() == 1) {
+            letterCodeMap = new HashMap<>();
+            letterCodeMap.put(orderedLetters.get(0), "0");
+        } else {
+            buildTree();
+            buildLetterCodeMap();
+        }
+        encode();
+        printReport();
+    }
+
+    private void buildCharOccuranceMap() {
+        charOccurrances = input.chars()
+                .mapToObj(c -> (char) c)
+                .collect(Collectors.groupingBy(c -> c, Collectors.counting()));
+    }
+
+    private void buildOrderedLettersList() {
+        Map<Character, Long> charOccurrancesCopy = new HashMap<>(charOccurrances);
+        while (!charOccurrancesCopy.isEmpty()) {
+            Optional<Map.Entry<Character, Long>> min = charOccurrancesCopy.entrySet().stream().min(Comparator.comparing(e -> e.getValue()));
+            orderedLetters.add(min.get().getKey());
+            charOccurrancesCopy.remove(min.get().getKey());
+        }
+    }
+
+    private void buildTree() {
+        for (Character letter : orderedLetters) {
+            queue.add(new HuffmanTreeNode(charOccurrances.get(letter), letter));
+        }
+        while (queue.size() > 1) {
+            HuffmanTreeNode left = queue.remove(0);
+            HuffmanTreeNode right = queue.remove(0);
+            HuffmanTreeNode parent = new HuffmanTreeNode(left.sum + right.sum, left, right);
+            int index = 0;
+            for (; index < queue.size() && queue.get(index).sum < parent.sum; index++) {
+            }
+            queue.add(index, parent);
+        }
+    }
+
+    private void buildLetterCodeMap() {
+        letterCodeMap = traverseTree(queue.get(0), "", new HashMap<>());
+    }
+
+    private Map<Character, String> traverseTree(HuffmanTreeNode n, String prevValues, Map<Character, String> knownCodes) {
+        if (n.letter != null) {
+            knownCodes.put(n.letter, prevValues);
+        } else {
+            traverseTree(n.left, prevValues + "0", knownCodes);
+            traverseTree(n.right, prevValues + "1", knownCodes);
+        }
+        return knownCodes;
+    }
+    
+    private void encode() {
+        encoded = new StringBuilder();
+        char[] inputCharArray = input.toCharArray();
+        for (int i = 0; i < inputCharArray.length; i++) {
+            encoded.append(letterCodeMap.get(inputCharArray[i]));
+        }
+    }
+    
+    private void printReport() {
+        System.out.println(orderedLetters.size() + " " + encoded.length());
+        for (Map.Entry<Character, String> letterCode : letterCodeMap.entrySet()) {
+            System.out.println(letterCode.getKey() + ": " + letterCode.getValue());
+        }
+        System.out.println(encoded.toString());
+    }
+}
